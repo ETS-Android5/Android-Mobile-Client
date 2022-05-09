@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class DraftSurveyActivity extends AppCompatActivity {
@@ -41,6 +42,8 @@ public class DraftSurveyActivity extends AppCompatActivity {
     private List<PatientDTO> patientDTOList = new ArrayList<>();
     private PatientsDAO patientsDAO;
     private SessionManager sessionManager = null;
+
+    private final ExecutorService executors = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,21 +79,20 @@ public class DraftSurveyActivity extends AppCompatActivity {
 //        draftSurveyAdapter = new SearchPatientAdapter(patientDTOList, context);
 //        recyclerView.setAdapter(draftSurveyAdapter);
 
-
-        Executors.newSingleThreadExecutor().execute(() -> {
+        executors.execute(() -> {
             // todo: background tasks
             try {
-            patientUUIDList = fetchUniquePatientUuidFromAttributes(); // Eg: 53
-            for (int i = 0; i < patientUUIDList.size(); i++) {
-                fetchValueAttrFromPatAttrTbl(patientUUIDList.get(i)); // Eg. 40 this patientuuids should be less here
+                patientUUIDList = fetchUniquePatientUuidFromAttributes(); // Eg: 53
+                for (int i = 0; i < patientUUIDList.size(); i++) {
+                    fetchValueAttrFromPatAttrTbl(patientUUIDList.get(i)); // Eg. 40 this patientuuids should be less here
+                }
+            } catch (DAOException e) {
+                e.printStackTrace();
             }
-        } catch (DAOException e) {
-            e.printStackTrace();
-        }
             runOnUiThread(() -> {
                 // todo: update your ui / view in activity
                 draftSurveyAdapter = new SearchPatientAdapter(patientDTOList, context);
-        recyclerView.setAdapter(draftSurveyAdapter);
+                recyclerView.setAdapter(draftSurveyAdapter);
 
 
             });
@@ -286,5 +288,11 @@ public class DraftSurveyActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        executors.shutdown();
     }
 }
